@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>API Test</title>
+</head>
+<body>
+  <h1>Check the console 👀</h1>
+
+  <script>
+    fetch("http://localhost:8000/issues")
+      .then(response => response.json())
+      .then(data => {
+        console.log("Issues from API:", data);
+      })
+      .catch(err => console.error(err));
+  </script>
+</body>
+</html>
