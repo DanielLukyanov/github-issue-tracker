@@ -1,5 +1,6 @@
 # gets the token via the env vars (with help from config.py) OR from OAuth flow (set up later). Main handles that.
 import httpx
+from app.services import extract_labels, normalize_issue
 
 class GitHubClient:
     def __init__(self, token: str):
@@ -15,14 +16,17 @@ class GitHubClient:
         Gets all issues from a given repo (open and closed).
         Returns JSON.
         """
-        url= f"{self.base_url}/repos/{owner}/{repo}/issues?state=all"
+        url= f"{self.base_url}/repos/{owner}/{repo}/issues?state=all" #we create the URL here
 
         
         async with httpx.AsyncClient() as client:
             try:
                 response = await client.get(url, headers=self.headers)
                 response.raise_for_status()
-                return response.json()
+                issues_data = response.json()
+                # Normalize the issues data before returning
+                normalized_issues = [normalize_issue(issue) for issue in issues_data]
+                return normalized_issues
             
             except httpx.HTTPError as e:
                 #GitHub responded but with an error status (i.e 4xx or 5xx)
