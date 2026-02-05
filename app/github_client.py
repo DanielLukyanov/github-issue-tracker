@@ -20,7 +20,6 @@ class GitHubClient:
 
         
         async with httpx.AsyncClient() as client:
-            try:
                 response = await client.get(url, headers=self.headers)
                 response.raise_for_status()
                 issues_data = response.json()
@@ -28,25 +27,6 @@ class GitHubClient:
                 normalized_issues = [normalize_issue(issue) for issue in issues_data]
                 return normalized_issues
             
-            except httpx.HTTPError as e:
-                #GitHub responded but with an error status (i.e 4xx or 5xx)
-                error_data = e.response.json()
-                message = error_data.get("message", "Github API error")
-
-                raise GithubAPIError(
-                    status_code=e.response.status_code,
-                    message=message
-                )
-            
-            except httpx.RequestError as e:
-                #A network error occurred
-                raise RuntimeError(f"Network error occurred: {str(e)}")
+           
         
     # asyn def create_issue
-
-
-class GithubAPIError(Exception):
-    def __init__(self, status_code: int, message: str):
-        self.status_code = status_code
-        self.message = message
-        super().__init__(f"GitHub API Error {status_code}: {message}")

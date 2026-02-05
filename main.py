@@ -1,5 +1,7 @@
 from fastapi import FastAPI, HTTPException
-from app.github_client import GitHubClient, GithubAPIError
+from app.github_client import GitHubClient
+from app.error_handler import handle_error
+from app.errors import AppError
 
 from app.config import GITHUB_TOKEN, GITHUB_OWNER, GITHUB_REPO # later change to dynamic config/OAuth
 from dev_modules.dev_cors import * # for dev porpoises only, allows all CORS. Remove for production!
@@ -24,9 +26,5 @@ async def list_issues():
         """
         issues = await github_client.get_issues(GITHUB_OWNER, GITHUB_REPO)
         return issues
-    
-    except httpx.RequestError as e:
-        raise GitHubAPIError(
-            status_code=503,
-            message="Could not connect to GitHub API"
-        )
+    except Exception as e:
+        raise handle_error(e)
