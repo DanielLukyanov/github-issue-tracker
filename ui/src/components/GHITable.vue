@@ -5,9 +5,23 @@ import type { GitHubIssue } from '../types/GitHubIssue'
 
 const issues = ref<GitHubIssue[]>([])
 
+const emit = defineEmits<{
+    (e: 'issuesLoaded', issues: GitHubIssue[]): void
+}>()
+
 onMounted(async () => {
     issues.value = await fetchIssues()
+    emit('issuesLoaded', issues.value)
 })
+
+async function refreshIssues(forceRefresh: boolean = false) {
+    console.log('Refreshing issues list...')
+    issues.value = await fetchIssues(forceRefresh)
+    emit('issuesLoaded', issues.value)
+}
+
+// Expose the refresh method so parent can call it
+defineExpose({ refreshIssues })
 </script>
 
 <template>

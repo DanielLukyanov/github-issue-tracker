@@ -7,9 +7,9 @@ export interface GitHubIssue {
     created_at: string
     updated_at: string
     labels: string[]
-    priority: string[]
-    type: string[]
-    client: string[]
+    priority: string | null
+    type: string | null
+    client: string | null
     assignee: string | null
-    url: string
+    html_url: string
 }

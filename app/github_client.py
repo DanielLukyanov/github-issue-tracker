@@ -56,5 +56,6 @@ class GitHubClient:
             created_issue = response.json()
             #append the new issue to cache (can be improved later with better cache management)
             normalized_issue = normalize_issue(created_issue)
-            self.cache.append(normalized_issue)
+            # Insert at the beginning of the cache to keep most recent issues at the top to mirror GitHub's default sorting by creation date
+            self.cache.insert(0, normalized_issue)
             return response.json()

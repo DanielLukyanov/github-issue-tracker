@@ -27,7 +27,7 @@ def normalize_issue(issue):
         "type": parsed.get("type"),
         "client": parsed.get("client"),
         "assignee": (issue["assignee"]["login"] if issue.get("assignee") else None),
-        "url": issue.get("html_url"),
+        "html_url": issue.get("html_url"),
     }
 
 def github_labels_to_domain(labels: list[str]) -> dict:

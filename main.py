@@ -30,12 +30,23 @@ def read_root():
     return {"message": "Hello, Github Issue Tracker!"}
 
 @app.get("/issues")
-async def list_issues():
+async def list_issues(force_refresh: bool = False):
     try:
         """
         Retun all issues from github repo
         """
-        issues = await github_client.get_issues(GITHUB_OWNER, GITHUB_REPO)
+        issues = await github_client.get_issues(GITHUB_OWNER, GITHUB_REPO, force_refresh=force_refresh)
         return issues
+    except Exception as e:
+        raise handle_error(e)
+
+@app.post("/issues")
+async def create_issue(issue: dict):
+    try:
+        """
+        Create an issue in the github repo with the provided data.
+        """
+        created_issue = await github_client.create_issue(GITHUB_OWNER, GITHUB_REPO, issue)
+        return created_issue
     except Exception as e:
         raise handle_error(e)
