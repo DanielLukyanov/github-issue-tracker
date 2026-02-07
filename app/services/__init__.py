@@ -1,1 +1,1 @@
-from .data_normalizer import normalize_issue, extract_labels
+from .data_normalizer import normalize_issue, serialise_issue
