@@ -1,18 +1,32 @@
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.sessions import SessionMiddleware
 from app.github_client import GitHubClient
 from app.error_handler import handle_error
 from app.errors import AppError
-
-from fastapi.middleware.cors import CORSMiddleware
+from app.auth import exchange_code_for_token, get_github_user
 
 # ======== DEV IMPORTS SETUP ========
-from app.config import GITHUB_TOKEN, GITHUB_OWNER, GITHUB_REPO # later change to dynamic config/OAuth
+from app.config import (
+    GITHUB_TOKEN, GITHUB_OWNER, GITHUB_REPO,
+    SESSION_SECRET, FRONTEND_URL
+)
 # from dev_modules.dev_cors import * # for dev porpoises only, allows all CORS. Remove for production!
 # ========== END DEV IMPORTS SETUP ========
 
 
 app = FastAPI()
+
+# Add session middleware BEFORE CORS with cross-domain cookie settings
+app.add_middleware(
+    SessionMiddleware, 
+    secret_key=SESSION_SECRET,
+    session_cookie="session",
+    max_age=14 * 24 * 60 * 60,  # 14 days
+    same_site="none",  # Allow cross-domain
+    https_only=True    # Required for same_site=none (use False for local dev)
+)
 
 # ======== DEV SETUP ========
 # allow_all_cors(app) # for dev porpoises only, allows all CORS. Remove for production!
@@ -45,6 +59,46 @@ async def app_error_handler(request: Request, exc: AppError):
 @app.get("/")
 def read_root():
     return {"message": "Hello, Github Issue Tracker!"}
+
+@app.get("/auth/callback")
+async def auth_callback(code: str, request: Request):
+    """Handle GitHub OAuth callback"""
+    try:
+        # Exchange code for access token
+        access_token = await exchange_code_for_token(code)
+        
+        # Get user info
+        user_info = await get_github_user(access_token)
+        
+        # Store in session
+        request.session["access_token"] = access_token
+        request.session["user"] = {
+            "login": user_info["login"],
+            "name": user_info.get("name"),
+            "avatar_url": user_info["avatar_url"],
+            "id": user_info["id"]
+        }
+        
+        # Redirect back to frontend with success flag
+        return RedirectResponse(url=f"{FRONTEND_URL}?login=success")
+    
+    except Exception as e:
+        print(f"OAuth error: {e}")
+        return RedirectResponse(url=f"{FRONTEND_URL}?error=auth_failed")
+
+@app.get("/auth/status")
+async def auth_status(request: Request):
+    """Check if user is authenticated"""
+    user = request.session.get("user")
+    if user:
+        return {"authenticated": True, "user": user}
+    return {"authenticated": False}
+
+@app.post("/auth/logout")
+async def logout(request: Request):
+    """Logout user"""
+    request.session.clear()
+    return {"message": "Logged out successfully"}
 
 @app.get("/issues")
 async def list_issues(force_refresh: bool = False):

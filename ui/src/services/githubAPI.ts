@@ -7,7 +7,9 @@ export async function fetchIssues(forceRefresh: boolean = false): Promise<GitHub
         const url = forceRefresh 
             ? `${API_BASE_URL}/issues?force_refresh=true`
             : `${API_BASE_URL}/issues`;
-        const res = await fetch(url);
+        const res = await fetch(url, {
+            credentials: 'include' // Send cookies with request
+        });
         if (!res.ok) {
             const errorData = await res.json();
             const error: any = new Error(errorData.message || 'Failed to fetch issues');
@@ -33,6 +35,7 @@ export async function createIssue(payload: Record<string, any>): Promise<GitHubI
             headers: {
                 'Content-Type': 'application/json'
             },
+            credentials: 'include', // Send cookies with request
             body: JSON.stringify(payload)
         });
 
