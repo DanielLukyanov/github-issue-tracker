@@ -19,7 +19,7 @@ app = FastAPI()
 # ========== END DEV SETUP ========
 
 origins = [
-    # "https://my-frontend-dom.com",  # need to replace this
+    "https://github-issue-tracker-frontend.onrender.com",  #backend-link
     "http://localhost:5173",          # allow local dev (Vite default port)
 ]
 

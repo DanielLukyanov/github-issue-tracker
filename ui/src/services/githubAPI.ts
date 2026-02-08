@@ -1,10 +1,12 @@
 import type { GitHubIssue } from "../types/GitHubIssue";
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
 export async function fetchIssues(forceRefresh: boolean = false): Promise<GitHubIssue[]> {
     try {
         const url = forceRefresh 
-            ? 'https://github-issue-tracker-wzxr.onrender.com/issues?force_refresh=true'
-            : 'https://github-issue-tracker-wzxr.onrender.com/issues';
+            ? `${API_BASE_URL}/issues?force_refresh=true`
+            : `${API_BASE_URL}/issues`;
         const res = await fetch(url);
         if (!res.ok) {
             const errorData = await res.json();
@@ -26,7 +28,7 @@ export async function fetchIssues(forceRefresh: boolean = false): Promise<GitHub
 
 export async function createIssue(payload: Record<string, any>): Promise<GitHubIssue> {
     try {
-        const res = await fetch('https://github-issue-tracker-wzxr.onrender.com/issues', {
+        const res = await fetch(`${API_BASE_URL}/issues`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
