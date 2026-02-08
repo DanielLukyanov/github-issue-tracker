@@ -4,6 +4,8 @@ from app.github_client import GitHubClient
 from app.error_handler import handle_error
 from app.errors import AppError
 
+from fastapi.middleware.cors import CORSMiddleware
+
 # ======== DEV IMPORTS SETUP ========
 from app.config import GITHUB_TOKEN, GITHUB_OWNER, GITHUB_REPO # later change to dynamic config/OAuth
 # from dev_modules.dev_cors import * # for dev porpoises only, allows all CORS. Remove for production!
@@ -15,6 +17,21 @@ app = FastAPI()
 # ======== DEV SETUP ========
 # allow_all_cors(app) # for dev porpoises only, allows all CORS. Remove for production!
 # ========== END DEV SETUP ========
+
+origins = [
+    # "https://my-frontend-dom.com",  # need to replace this
+    "http://localhost:5173",          # allow local dev (Vite default port)
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,  # Allowed origins
+    allow_credentials=True,
+    allow_methods=["*"],    # GET, POST, PUT, DELETE, etc.
+    allow_headers=["*"],    # Allow all headers
+)
+
+# Include your routes
 
 github_client = GitHubClient(GITHUB_TOKEN)
 

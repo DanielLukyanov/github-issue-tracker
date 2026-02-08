@@ -3,8 +3,8 @@ import type { GitHubIssue } from "../types/GitHubIssue";
 export async function fetchIssues(forceRefresh: boolean = false): Promise<GitHubIssue[]> {
     try {
         const url = forceRefresh 
-            ? 'http://localhost:8000/issues?force_refresh=true'
-            : 'http://localhost:8000/issues';
+            ? 'https://github-issue-tracker-wzxr.onrender.com/issues?force_refresh=true'
+            : 'https://github-issue-tracker-wzxr.onrender.com/issues';
         const res = await fetch(url);
         if (!res.ok) {
             const errorData = await res.json();
@@ -26,7 +26,7 @@ export async function fetchIssues(forceRefresh: boolean = false): Promise<GitHub
 
 export async function createIssue(payload: Record<string, any>): Promise<GitHubIssue> {
     try {
-        const res = await fetch('http://localhost:8000/issues', {
+        const res = await fetch('https://github-issue-tracker-wzxr.onrender.com/issues', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
