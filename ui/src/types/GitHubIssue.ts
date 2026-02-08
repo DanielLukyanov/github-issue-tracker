@@ -1,3 +1,8 @@
+export interface GitHubLabel {
+    name: string
+    color: string
+}
+
 export interface GitHubIssue {
     id: number
     number: number
@@ -6,7 +11,7 @@ export interface GitHubIssue {
     state: string
     created_at: string
     updated_at: string
-    labels: string[]
+    labels: GitHubLabel[]
     priority: string | null
     type: string | null
     client: string | null
