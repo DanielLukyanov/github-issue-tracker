@@ -1,74 +1,92 @@
 <template>
     <div 
         v-if="condition"
-        :class="['popup', { show: condition }, popupType]"
-        @mouseenter="resetTimer"
-        @mouseleave="startTimer"
+        :class="popupClasses"
+        @mouseenter="pauseTimer"
+        @mouseleave="resumeTimer"
     >
-            <div class="close-btn" @click="closePopup">X</div>
-            <h2>{{ popupName }}</h2>
-            <p v-if="isError && errorCode" class="error-code">Error Code: {{ errorCode }}</p>
-            <h3>{{ popupMessage }}</h3>
-            <a
-                v-if="issueUrl"
-                :href="issueUrl"
-                target="_blank"
-                rel="noopener noreferrer"
-            >
-                {{ issueUrl }}
-            </a>
-            <div class="timer-bar" :style="{ width: `${timerWidth}%` }"></div>
-     </div>
+        <div class="close-btn" @click="closePopup">✕</div>
+        <h2>{{ popupName }}</h2>
+        <p v-show="errorCodeDisplay" class="error-code">{{ errorCodeDisplay }}</p>
+        <h3>{{ popupMessage }}</h3>
+        <a
+            v-show="issueUrl"
+            :href="issueUrl"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="issue-link"
+        >
+            {{ issueUrl }}
+        </a>
+        <div class="timer-bar" :style="timerBarStyle"></div>
+    </div>
 </template>
 
 <script setup lang="ts">
-import { ref, watch, computed, onUnmounted } from 'vue';
+import { ref, watch, computed, onUnmounted } from 'vue'
 
-
-const props = defineProps<{
-    popupName: string
-    popupMessage: string
-    issueUrl?: string
-    condition: boolean
-    type?: 'success' | 'error'
-    errorCode?: string | number
-}>()
-
-const popupType = computed(() => props.type || 'success')
-const isError = computed(() => popupType.value === 'error')
+const props = withDefaults(
+    defineProps<{
+        popupName: string
+        popupMessage: string
+        issueUrl?: string
+        condition: boolean
+        type?: 'success' | 'error'
+        errorCode?: string | number
+    }>(),
+    {
+        type: 'success'
+    }
+)
 
 const emit = defineEmits<{
     (e: 'close'): void
 }>()
 
+// Constants
+const TIMER_DURATION_MS = 2000
+const TIMER_INTERVAL_MS = 100
+
+// Reactive state
 const timerWidth = ref(100)
 let timerInterval: number | null = null
 let timerTimeout: number | null = null
 
-const timer = ref(2)
+// Computed properties
+const popupClasses = computed(() => ['popup', 'show', props.type])
 
+const errorCodeDisplay = computed(() => 
+    props.type === 'error' && props.errorCode 
+        ? `Error Code: ${props.errorCode}` 
+        : ''
+)
+
+const timerBarStyle = computed(() => ({
+    width: `${timerWidth.value}%`
+}))
+
+// Timer management
 function startTimer() {
+    clearTimers()
     timerWidth.value = 100
 
-    resetTimer()
-
-    const totalMs = timer.value * 1000
-    const intervalMs = 100
-    const decrementPerTick = (intervalMs / totalMs) * 100
-
-    timerTimeout = window.setTimeout(() => {
-        closePopup()
-    }, totalMs+150)
+    const decrementPerTick = (TIMER_INTERVAL_MS / TIMER_DURATION_MS) * 100
 
     timerInterval = window.setInterval(() => {
         timerWidth.value = Math.max(0, timerWidth.value - decrementPerTick)
-    }, intervalMs)
+        
+        // Close popup when timer reaches 0, with buffer for animation
+        if (timerWidth.value <= 0) {
+            clearInterval(timerInterval!)
+            timerInterval = null
+            timerTimeout = window.setTimeout(() => {
+                closePopup()
+            }, 150)
+        }
+    }, TIMER_INTERVAL_MS)
 }
 
-function resetTimer() {
-    timerWidth.value = 100
-    timer.value = 2
-
+function clearTimers() {
     if (timerTimeout) {
         clearTimeout(timerTimeout)
         timerTimeout = null
@@ -79,49 +97,76 @@ function resetTimer() {
     }
 }
 
+function pauseTimer() {
+    clearTimers()
+}
+
+function resumeTimer() {
+    if (props.condition && timerWidth.value > 0) {
+        const decrementPerTick = (TIMER_INTERVAL_MS / TIMER_DURATION_MS) * 100
+
+        timerInterval = window.setInterval(() => {
+            timerWidth.value = Math.max(0, timerWidth.value - decrementPerTick)
+            
+            // Close popup when timer reaches 0, with buffer for animation
+            if (timerWidth.value <= 0) {
+                clearInterval(timerInterval!)
+                timerInterval = null
+                timerTimeout = window.setTimeout(() => {
+                    closePopup()
+                }, 150)
+            }
+        }, TIMER_INTERVAL_MS)
+    }
+}
+
 function closePopup() {
-    resetTimer()
+    clearTimers()
+    timerWidth.value = 100
     emit('close')
 }
 
+// Watchers
 watch(
     () => props.condition,
-    (newVal) => {
-        if (newVal) {
+    (isVisible) => {
+        if (isVisible) {
             startTimer()
         } else {
-            resetTimer()
+            clearTimers()
+            timerWidth.value = 100
         }
     },
     { immediate: true }
 )
 
 onUnmounted(() => {
-    resetTimer()
+    clearTimers()
 })
 
 </script>
 
 <style scoped>
-body {
-    margin: 0;
-}
-
 .popup {
     position: fixed;
     top: 20px;
     left: 0;
+    padding: 15px 30px 15px 15px;
     border-radius: 5px;
-    padding: 15px;
-    padding-right: 30px;
-    box-shadow: 0 0px 10px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
     transform: translateX(-100%);
     transition: transform 0.3s ease-in-out;
     cursor: default;
+    background-color: #fff;
+    min-width: 400px;
 }
 
+.popup.show {
+    transform: translateX(0);
+}
+
+/* Success variant */
 .popup.success {
-    background-color: #fff;
     color: #004e23;
     border-right: 4px solid #00a651;
 }
@@ -134,8 +179,8 @@ body {
     background-color: #003511;
 }
 
+/* Error variant */
 .popup.error {
-    background-color: #fff;
     color: #8b0000;
     border-right: 4px solid #d32f2f;
 }
@@ -148,23 +193,20 @@ body {
     background-color: #d32f2f;
 }
 
-.popup.show {
-    transform: translateX(0);
-}
-
+/* Elements */
 .close-btn {
     position: absolute;
     top: 5px;
     right: 10px;
-    cursor: pointer;
     font-weight: bold;
+    font-size: 18px;
     color: #585858;
     cursor: pointer;
+    user-select: none;
 }
 
-.timer-bar {
-    height: 3px;
-    transition: width 0.1s linear;
+.close-btn:hover {
+    color: #000;
 }
 
 .error-code {
@@ -174,4 +216,15 @@ body {
     opacity: 0.8;
 }
 
+.issue-link {
+    display: inline-block;
+    margin-top: 8px;
+    word-break: break-all;
+}
+
+.timer-bar {
+    height: 3px;
+    margin-top: 10px;
+    transition: width 0.1s linear;
+}
 </style>

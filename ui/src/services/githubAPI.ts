@@ -7,7 +7,12 @@ export async function fetchIssues(forceRefresh: boolean = false): Promise<GitHub
             : 'http://localhost:8000/issues';
         const res = await fetch(url);
         if (!res.ok) {
-            throw new Error(`Failed to fetch issues: ${res.statusText}`);
+            const errorData = await res.json();
+            const error: any = new Error(errorData.message || 'Failed to fetch issues');
+            error.code = errorData.error;
+            error.status = res.status;
+            error.details = errorData.details;
+            throw error;
         }
         return await res.json();
 
@@ -30,8 +35,15 @@ export async function createIssue(payload: Record<string, any>): Promise<GitHubI
         });
 
         if (!res.ok) {
-            throw new Error(`Failed to create issue: ${res.statusText}`);
+            // Parse backend error response
+            const errorData = await res.json();
+            const error: any = new Error(errorData.message || 'Failed to create issue');
+            error.code = errorData.error;
+            error.status = res.status;
+            error.details = errorData.details;
+            throw error;
         }
+        
         const data = await res.json();
         console.log("Created issue:", data);
         return data;

@@ -6,111 +6,89 @@
         />
         <BaseButton
             text="Refresh Issues"
-            @click="issuesTable?.refreshIssues(true)"
+            @click="handleRefreshIssues"
         />
-        <!-- <BaseButton
-            text="test-popup"
-            @click="showSuccessMessage = true"   
-        />
-        <BaseButton
-            text="test-error-popup"
-            @click="popupType = 'error'; showSuccessMessage = true"
-        /> -->
-        <CreateIssueModal v-if="showModal" @close="closeModal" @submit="onSubmitIssue" />
-        <AlertPopup
-            v-if="showSuccessMessage"
-            :popupName="popupType === 'success' ? 'Issue Created' : 'Error'"
-            :popupMessage="popupMessage"
-            :issueUrl="issueUrl"
-            :condition="showSuccessMessage"
-            :type="popupType"
-            :errorCode="errorCode"
-            @close="showSuccessMessage = false"
+        <CreateIssueModal 
+            v-if="showModal" 
+            @close="closeModal" 
+            @submit="onSubmitIssue" 
         />
     </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, inject } from 'vue'
-import BaseButton from "./BaseButton.vue"
-import CreateIssueModal from "./CreateIssueModal.vue"
-import AlertPopup from "./AlertPopup.vue"
+import { ref, inject } from 'vue'
+import BaseButton from './BaseButton.vue'
+import CreateIssueModal from './CreateIssueModal.vue'
 import { createIssue } from '../services/githubAPI'
 
 const issuesTable = inject<any>('issuesTable')
+const { showPopup } = inject<any>('popup')
 
 const emit = defineEmits<{
     (e: 'issueCreated'): void
 }>()
 
 const showModal = ref(false)
-const showSuccessMessage = ref(false)
-const issueTitle = ref('')
-const issueUrl = ref('')
-const successMessage = ref('')
-const popupType = ref<'success' | 'error'>('success')
-const errorCode = ref<string | number>('')
 
+// Modal handlers
 function openCreateIssueModal() {
-  showModal.value = true
+    showModal.value = true
 }
 
 function closeModal() {
-  showModal.value = false
+    showModal.value = false
 }
 
-function onSubmitIssue(payload: Record<string, any>) {
-    createIssue(payload)
-  .then(response => {
-    popupType.value = 'success'
-    issueTitle.value = response.title
-    issueUrl.value = response.html_url
-    successMessage.value = 'Issue created successfully!'
-    console.log('Issue submitted')
-    showSuccessMessage.value = true;
-    console.log(issueUrl.value, response.html_url);
-    closeModal();
-    // Emit event to tell parent to refresh issues list from cache
-    emit('issueCreated')
-    setTimeout(() => {
-        showSuccessMessage.value = false
-        }, 5000) // Hide message after 5 seconds
-    })
-    .catch(error => {
-    console.error('Error creating issue:', error)
-    popupType.value = 'error'
-    errorCode.value = error.response?.status || 'UNKNOWN'
-    issueTitle.value = 'Failed to create issue'
-    issueUrl.value = ''
-    showSuccessMessage.value = true
-    closeModal()
-    setTimeout(() => {
-        showSuccessMessage.value = false
-        }, 5000)
-    })
-}
-const popupMessage = computed(() => {
-    if (popupType.value === 'error') {
-        return `Failed to create issue. Please try again.`
+// Action handlers
+async function handleRefreshIssues() {
+    try {
+        await issuesTable?.value?.refreshIssues(true)
+        showPopup({
+            type: 'success',
+            message: 'Issues refreshed successfully!'
+        })
+    } catch (error: any) {
+        console.error('Error refreshing issues:', error)
+        showPopup({
+            type: 'error',
+            message: error.message || 'Unable to connect to server. Please try again.',
+            errorCode: error.code || error.status || 'CONNECTION_ERROR'
+        })
     }
-    return `Issue "${issueTitle.value}" created successfully!`
-});
+}
+
+async function onSubmitIssue(payload: Record<string, any>) {
+    try {
+        const response = await createIssue(payload)
+        
+        showPopup({
+            type: 'success',
+            message: `Issue "${response.title}" created successfully!`,
+            issueUrl: response.html_url
+        })
+        
+        closeModal()
+        emit('issueCreated')
+    } catch (error: any) {
+        console.error('Error creating issue:', error)
+        
+        showPopup({
+            type: 'error',
+            message: error.message || 'Failed to create issue. Please try again.',
+            errorCode: error.code || error.status || 'UNKNOWN'
+        })
+        
+        closeModal()
+    }
+}
 </script>
 
 <style scoped>
-    .table-controller {
-        display: flex;
-        justify-content: flex-end;
-        padding: 30px;
-    }
-
-    .success-message {
-        margin-top: 20px;
-        padding: 15px;
-        background-color: #d4edda;
-        color: #155724;
-        border: 1px solid #c3e6cb;
-        border-radius: 4px;
-    }
-
+.table-controller {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 30px;
+}
 </style>

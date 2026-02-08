@@ -23,6 +23,7 @@ defineProps({
         font-weight: 600;
         cursor: pointer;
         transition: background 0.2s ease;
+        margin: 0 10px 0 10px;
     }
 
     .base-button:hover {
