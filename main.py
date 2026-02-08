@@ -6,14 +6,14 @@ from app.errors import AppError
 
 # ======== DEV IMPORTS SETUP ========
 from app.config import GITHUB_TOKEN, GITHUB_OWNER, GITHUB_REPO # later change to dynamic config/OAuth
-from dev_modules.dev_cors import * # for dev porpoises only, allows all CORS. Remove for production!
+# from dev_modules.dev_cors import * # for dev porpoises only, allows all CORS. Remove for production!
 # ========== END DEV IMPORTS SETUP ========
 
 
 app = FastAPI()
 
 # ======== DEV SETUP ========
-allow_all_cors(app) # for dev porpoises only, allows all CORS. Remove for production!
+# allow_all_cors(app) # for dev porpoises only, allows all CORS. Remove for production!
 # ========== END DEV SETUP ========
 
 github_client = GitHubClient(GITHUB_TOKEN)

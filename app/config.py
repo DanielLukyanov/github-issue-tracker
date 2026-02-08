@@ -1,8 +1,11 @@
 import os
-from dotenv import load_dotenv
 
-# Load environment variables from .env file
-load_dotenv()
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass 
+
 
 # Access environment variables
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
