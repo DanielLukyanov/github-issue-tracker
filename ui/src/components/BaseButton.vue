@@ -1,5 +1,5 @@
 <template>
-    <button class="base-button" @click="$emit('click')">
+    <button class="base-button" @click="$emit('click')" :disabled="disabled">
         {{ text }}
     </button>
 </template>
@@ -9,6 +9,10 @@ defineProps({
   text: {
     type: String,
     required: true
+  },
+  disabled: {
+    type: Boolean,
+    default: false
   }
 })
 </script>

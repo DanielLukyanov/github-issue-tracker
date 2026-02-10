@@ -6,7 +6,7 @@ ENV PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
-# Install system deps (optional but safe)
+# Install system deps
 RUN apt-get update && apt-get install -y \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
@@ -16,11 +16,11 @@ COPY requirements/base.txt requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy backend code
-COPY app app
-COPY main.py main.py
+COPY main.py .
+COPY app ./app
 
-# Expose port Render expects
-EXPOSE 10000
+# Expose port for FastAPI
+EXPOSE 8000
 
 # Run FastAPI
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "10000"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -16,6 +16,7 @@ class GitHubClient:
     async def get_issues(self, owner: str, repo: str, force_refresh: bool = False) -> list[dict]:
         """
         Gets all issues from a given repo (open and closed).
+        Fetches all pages from GitHub API.
         Returns JSON.
         """
 
@@ -24,18 +25,33 @@ class GitHubClient:
             print("Returning issues from cache")
             return self.cache
 
-        url= f"{self.base_url}/repos/{owner}/{repo}/issues?state=all" #we create the URL here
-
+        all_issues = []
+        page = 1
+        per_page = 100  # Max allowed by GitHub API
         
         async with httpx.AsyncClient() as client:
+            while True:
+                url = f"{self.base_url}/repos/{owner}/{repo}/issues?state=all&page={page}&per_page={per_page}"
                 response = await client.get(url, headers=self.headers)
                 response.raise_for_status()
                 issues_data = response.json()
-                # Normalize the issues data before returning
-                normalized_issues = [normalize_issue(issue) for issue in issues_data]
-                self.cache = normalized_issues # Update cache
-                print("Fetched issues from GitHub API and updated cache")
-                return normalized_issues
+                
+                if not issues_data:  # No more issues
+                    break
+                    
+                all_issues.extend(issues_data)
+                
+                # Check if there are more pages
+                if len(issues_data) < per_page:
+                    break
+                    
+                page += 1
+            
+            # Normalize all issues
+            normalized_issues = [normalize_issue(issue) for issue in all_issues]
+            self.cache = normalized_issues
+            print(f"Fetched {len(normalized_issues)} issues from GitHub API and updated cache")
+            return normalized_issues
             
            
         

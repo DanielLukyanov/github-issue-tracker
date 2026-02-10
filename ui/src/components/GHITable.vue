@@ -1,5 +1,8 @@
 <template>
     <div class="table-container">
+        <div class="pagination-info">
+            <strong>{{ paginationInfo }}</strong>
+        </div>
         <table>
             <thead>
                 <tr>
@@ -63,17 +66,38 @@ import { sortIssues, type SortKey, type SortDirection } from '../services/issueV
 const rawIssues = ref<GitHubIssue[]>([])
 const currentSortKey = ref<SortKey | null>(null)
 const currentSortDirection = ref<SortDirection>('asc')
+const currentPage = ref(1)
+const itemsPerPage = ref(10)
 
 const emit = defineEmits<{
     (e: 'issuesLoaded', issues: GitHubIssue[]): void
 }>()
 
 // Computed property that returns sorted issues
-const issues = computed(() => {
+const sortedIssues = computed(() => {
     if (!currentSortKey.value) {
         return rawIssues.value // No sorting, return original
     }
     return sortIssues(rawIssues.value, currentSortKey.value, currentSortDirection.value)
+})
+
+// Computed property for paginated issues
+const issues = computed(() => {
+    const start = (currentPage.value - 1) * itemsPerPage.value
+    const end = start + itemsPerPage.value
+    return sortedIssues.value.slice(start, end)
+})
+
+// Total pages
+const totalPages = computed(() => {
+    return Math.ceil(sortedIssues.value.length / itemsPerPage.value)
+})
+
+// Pagination info text
+const paginationInfo = computed(() => {
+    const start = sortedIssues.value.length === 0 ? 0 : (currentPage.value - 1) * itemsPerPage.value + 1
+    const end = Math.min(currentPage.value * itemsPerPage.value, sortedIssues.value.length)
+    return `${start}-${end} of ${sortedIssues.value.length} issues`
 })
 
 // Handle column header clicks
@@ -130,11 +154,45 @@ onMounted(async () => {
 async function refreshIssues(forceRefresh: boolean = false) {
     console.log('Refreshing issues list...')
     rawIssues.value = await fetchIssues(forceRefresh)
+    currentPage.value = 1 // Reset to first page on refresh
     emit('issuesLoaded', rawIssues.value)
 }
 
-// Expose the refresh method so parent can call it
-defineExpose({ refreshIssues })
+// Pagination methods
+function setPage(page: number) {
+    if (page >= 1 && page <= totalPages.value) {
+        currentPage.value = page
+    }
+}
+
+function nextPage() {
+    if (currentPage.value < totalPages.value) {
+        currentPage.value++
+    }
+}
+
+function prevPage() {
+    if (currentPage.value > 1) {
+        currentPage.value--
+    }
+}
+
+function setItemsPerPage(count: number) {
+    itemsPerPage.value = count
+    currentPage.value = 1 // Reset to first page when changing items per page
+}
+
+// Expose methods and state for parent components
+defineExpose({ 
+    refreshIssues, 
+    currentPage, 
+    totalPages, 
+    itemsPerPage,
+    setPage, 
+    nextPage, 
+    prevPage, 
+    setItemsPerPage 
+})
 </script>
 
 
@@ -147,7 +205,7 @@ body {
 table {
   border-collapse: collapse;
   width: 100%;
-  table-layout:unset;
+  table-layout: auto;
   margin: 0;
   padding: 0;
 }
@@ -164,10 +222,10 @@ th, td {
     padding: 8px;
     border: 1px solid #ddd;
     border-radius: 5px;
+    max-width: 300px;
 }
 
 td{
-    line-clamp: 2;
     overflow: hidden;
     text-overflow: ellipsis;
 }
@@ -176,11 +234,12 @@ td{
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
-    line-clamp: 2;
     white-space: normal;
     overflow: hidden;
     text-overflow: ellipsis;
-    /* width: 100px; */
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    word-break: break-all;
     min-height: 50px;
 }
 
@@ -189,6 +248,13 @@ td{
     width: 100%;
     padding: 20px;
     box-sizing: border-box;
+    overflow-x: auto;
+}
+
+.pagination-info {
+    margin-bottom: 15px;
+    font-size: 14px;
+    color: #333;
 }
 
 </style>
