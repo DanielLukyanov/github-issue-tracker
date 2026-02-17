@@ -187,7 +187,8 @@ This project was built as a **stretch assignment** — intentionally reaching sl
 
 The priority was to ship a system that works end‑to‑end, is secure, understandable, and can be reasoned about under review, even if that meant accepting a few pragmatic trade‑offs along the way.
 
-
+## Testing on Browsers:
+Tested in Chrome. Firefox may require enabling third-party cookies due to cross-site session handling.
 
 ---
 
