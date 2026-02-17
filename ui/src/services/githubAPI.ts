@@ -11,11 +11,17 @@ export async function fetchIssues(forceRefresh: boolean = false): Promise<GitHub
             credentials: 'include' // Send cookies with request
         });
         if (!res.ok) {
-            const errorData = await res.json();
+            const errorData = await res.json().catch(() => ({}));
             const error: any = new Error(errorData.message || 'Failed to fetch issues');
-            error.code = errorData.error;
+            error.code = errorData.code || errorData.error;
             error.status = res.status;
             error.details = errorData.details;
+            
+            // Log auth failures for debugging
+            if (res.status === 401) {
+                console.error('Authentication failed:', errorData);
+            }
+            
             throw error;
         }
         return await res.json();
@@ -41,11 +47,17 @@ export async function createIssue(payload: Record<string, any>): Promise<GitHubI
 
         if (!res.ok) {
             // Parse backend error response
-            const errorData = await res.json();
+            const errorData = await res.json().catch(() => ({}));
             const error: any = new Error(errorData.message || 'Failed to create issue');
-            error.code = errorData.error;
+            error.code = errorData.code || errorData.error;
             error.status = res.status;
             error.details = errorData.details;
+            
+            // Log auth failures for debugging
+            if (res.status === 401) {
+                console.error('Authentication failed:', errorData);
+            }
+            
             throw error;
         }
         

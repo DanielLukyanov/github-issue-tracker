@@ -18,16 +18,6 @@ from app.config import (
 
 app = FastAPI()
 
-# Add session middleware BEFORE CORS with cross-domain cookie settings
-app.add_middleware(
-    SessionMiddleware, 
-    secret_key=SESSION_SECRET,
-    session_cookie="session",
-    max_age=14 * 24 * 60 * 60,  # 14 days
-    same_site="none",  # Allow cross-domain
-    https_only=True    # Required for same_site=none (use False for local dev)
-)
-
 # ======== DEV SETUP ========
 # allow_all_cors(app) # for dev porpoises only, allows all CORS. Remove for production!
 # ========== END DEV SETUP ========
@@ -37,6 +27,17 @@ origins = [
     "http://localhost:5173",          # allow local dev (Vite default port)
 ]
 
+# Add SessionMiddleware FIRST (middleware runs in reverse order, so this executes AFTER CORS)
+app.add_middleware(
+    SessionMiddleware, 
+    secret_key=SESSION_SECRET,
+    session_cookie="session",
+    max_age=14 * 24 * 60 * 60,  # 14 days
+    same_site="none",  # Allow cross-domain
+    https_only=True    # Required for same_site=none (use False for local dev)
+)
+
+# Add CORS LAST so it executes FIRST and sets headers before session cookie is read
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,  # Allowed origins
@@ -101,7 +102,15 @@ async def logout(request: Request):
     return {"message": "Logged out successfully"}
 
 @app.get("/issues")
-async def list_issues(force_refresh: bool = False):
+async def list_issues(request: Request, force_refresh: bool = False):
+    # Verify user is authenticated
+    if "access_token" not in request.session:
+        raise AppError(
+            message="Authentication required. Please log in.",
+            status_code=401,
+            code="unauthorized"
+        )
+    
     try:
         """
         Retun all issues from github repo
@@ -112,7 +121,15 @@ async def list_issues(force_refresh: bool = False):
         raise handle_error(e)
 
 @app.post("/issues")
-async def create_issue(issue: dict):
+async def create_issue(request: Request, issue: dict):
+    # Verify user is authenticated
+    if "access_token" not in request.session:
+        raise AppError(
+            message="Authentication required. Please log in.",
+            status_code=401,
+            code="unauthorized"
+        )
+    
     try:
         """
         Create an issue in the github repo with the provided data.

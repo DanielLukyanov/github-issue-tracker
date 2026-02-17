@@ -104,6 +104,15 @@ async function handleRefreshIssues() {
         })
     } catch (error: any) {
         console.error('Error refreshing issues:', error)
+        
+        // Check if it's an authentication error
+        if (error.status === 401 || error.code === 'unauthorized') {
+            console.log('Session expired, redirecting to login')
+            // This will trigger the login page to show
+            window.location.reload()
+            return
+        }
+        
         showPopup({
             type: 'error',
             message: error.message || 'Unable to connect to server. Please try again.',

@@ -53,13 +53,34 @@ onMounted(async () => {
   // Check if we just came back from OAuth (look for URL params)
   const params = new URLSearchParams(window.location.search)
   if (params.get('login') === 'success') {
-    // Give backend a moment to set the session, then check
-    await new Promise(resolve => setTimeout(resolve, 500))
-    // Clean up URL
+    // Clean up URL first
     window.history.replaceState({}, document.title, window.location.pathname)
+    
+    // Retry auth check with exponential backoff to ensure cookie is set
+    let retries = 0
+    const maxRetries = 5
+    
+    while (retries < maxRetries) {
+      await checkAuth()
+      
+      if (isAuthenticated.value) {
+        console.log('Authentication successful after OAuth callback')
+        break
+      }
+      
+      // Wait with exponential backoff: 100ms, 200ms, 400ms, 800ms, 1600ms
+      const delay = 100 * Math.pow(2, retries)
+      console.log(`Waiting ${delay}ms before retry ${retries + 1}/${maxRetries}...`)
+      await new Promise(resolve => setTimeout(resolve, delay))
+      retries++
+    }
+    
+    if (!isAuthenticated.value) {
+      console.error('Authentication failed after OAuth callback - session may not be persisted')
+    }
+  } else {
+    await checkAuth()
   }
-  
-  await checkAuth()
 })
 
 async function checkAuth() {
