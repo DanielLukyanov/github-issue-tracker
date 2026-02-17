@@ -6,9 +6,7 @@ try:
 except ImportError:
     pass 
 
-
-# Access environment variables
-GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
+# Repository configuration (still needed to know which repo to access)
 GITHUB_OWNER = os.getenv("GITHUB_OWNER")
 GITHUB_REPO = os.getenv("GITHUB_REPO")
 
@@ -20,8 +18,8 @@ SESSION_SECRET = os.getenv("SESSION_SECRET", "githubissuetracker")
 # Frontend URL for redirects
 FRONTEND_URL = os.getenv("FRONTEND_URL", "https://github-issue-tracker-frontend.onrender.com")
 
-# if not GITHUB_TOKEN or not GITHUB_REPO:
-#     raise ValueError("GITHUB_TOKEN and GITHUB_REPO must be set in the .env file")
-
 if not GITHUB_CLIENT_ID or not GITHUB_CLIENT_SECRET:
     raise ValueError("GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET must be set for OAuth")
+
+if not GITHUB_OWNER or not GITHUB_REPO:
+    raise ValueError("GITHUB_OWNER and GITHUB_REPO must be set")

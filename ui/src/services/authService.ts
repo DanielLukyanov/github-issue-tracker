@@ -26,7 +26,8 @@ export async function checkAuthStatus(): Promise<AuthStatus> {
     });
     
     if (!response.ok) {
-      return { authenticated: false };
+        console.warn("Firefox may be blocking cookies. Try allowing third-party cookies.");
+        return { authenticated: false };
     }
     
     return await response.json();

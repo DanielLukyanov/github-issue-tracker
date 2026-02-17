@@ -6,49 +6,40 @@ from app.github_client import GitHubClient
 from app.error_handler import handle_error
 from app.errors import AppError
 from app.auth import exchange_code_for_token, get_github_user
-
-# ======== DEV IMPORTS SETUP ========
 from app.config import (
-    GITHUB_TOKEN, GITHUB_OWNER, GITHUB_REPO,
+    GITHUB_OWNER, GITHUB_REPO,
     SESSION_SECRET, FRONTEND_URL
 )
-# from dev_modules.dev_cors import * # for dev porpoises only, allows all CORS. Remove for production!
-# ========== END DEV IMPORTS SETUP ========
-
+import os
 
 app = FastAPI()
 
-# ======== DEV SETUP ========
-# allow_all_cors(app) # for dev porpoises only, allows all CORS. Remove for production!
-# ========== END DEV SETUP ========
-
+# Production origin - your Render frontend URL
 origins = [
-    "https://github-issue-tracker-frontend.onrender.com",  #backend-link
-    "http://localhost:5173",          # allow local dev (Vite default port)
+    "https://github-issue-tracker-frontend.onrender.com",
 ]
 
-# Add SessionMiddleware FIRST (middleware runs in reverse order, so this executes AFTER CORS)
+# Add CORS first (executes last)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Add SessionMiddleware last (executes first)
 app.add_middleware(
     SessionMiddleware, 
     secret_key=SESSION_SECRET,
     session_cookie="session",
-    max_age=14 * 24 * 60 * 60,  # 14 days
-    same_site="none",  # Allow cross-domain
-    https_only=True    # Required for same_site=none (use False for local dev)
+    max_age=14 * 24 * 60 * 60,
+    same_site="none",  # Required for cross-origin cookies
+    https_only=True    # Required when same_site="none"
 )
 
-# Add CORS LAST so it executes FIRST and sets headers before session cookie is read
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=origins,  # Allowed origins
-    allow_credentials=True,
-    allow_methods=["*"],    # GET, POST, PUT, DELETE, etc.
-    allow_headers=["*"],    # Allow all headers
-)
-
-# Include your routes
-
-github_client = GitHubClient(GITHUB_TOKEN)
+# Initialize GitHub client WITHOUT any token
+github_client = GitHubClient()
 
 @app.exception_handler(AppError)
 async def app_error_handler(request: Request, exc: AppError):
@@ -65,13 +56,9 @@ def read_root():
 async def auth_callback(code: str, request: Request):
     """Handle GitHub OAuth callback"""
     try:
-        # Exchange code for access token
         access_token = await exchange_code_for_token(code)
-        
-        # Get user info
         user_info = await get_github_user(access_token)
         
-        # Store in session
         request.session["access_token"] = access_token
         request.session["user"] = {
             "login": user_info["login"],
@@ -80,7 +67,6 @@ async def auth_callback(code: str, request: Request):
             "id": user_info["id"]
         }
         
-        # Redirect back to frontend with success flag
         return RedirectResponse(url=f"{FRONTEND_URL}?login=success")
     
     except Exception as e:
@@ -103,8 +89,9 @@ async def logout(request: Request):
 
 @app.get("/issues")
 async def list_issues(request: Request, force_refresh: bool = False):
-    # Verify user is authenticated
-    if "access_token" not in request.session:
+    # Get user's OAuth token from session
+    access_token = request.session.get("access_token")
+    if not access_token:
         raise AppError(
             message="Authentication required. Please log in.",
             status_code=401,
@@ -112,18 +99,22 @@ async def list_issues(request: Request, force_refresh: bool = False):
         )
     
     try:
-        """
-        Retun all issues from github repo
-        """
-        issues = await github_client.get_issues(GITHUB_OWNER, GITHUB_REPO, force_refresh=force_refresh)
+        # Pass user's OAuth token to GitHubClient
+        issues = await github_client.get_issues(
+            GITHUB_OWNER, 
+            GITHUB_REPO, 
+            token=access_token,  # ← Use user's OAuth token
+            force_refresh=force_refresh
+        )
         return issues
     except Exception as e:
         raise handle_error(e)
 
 @app.post("/issues")
 async def create_issue(request: Request, issue: dict):
-    # Verify user is authenticated
-    if "access_token" not in request.session:
+    # Get user's OAuth token from session
+    access_token = request.session.get("access_token")
+    if not access_token:
         raise AppError(
             message="Authentication required. Please log in.",
             status_code=401,
@@ -131,10 +122,13 @@ async def create_issue(request: Request, issue: dict):
         )
     
     try:
-        """
-        Create an issue in the github repo with the provided data.
-        """
-        created_issue = await github_client.create_issue(GITHUB_OWNER, GITHUB_REPO, issue)
+        # Pass user's OAuth token to GitHubClient
+        created_issue = await github_client.create_issue(
+            GITHUB_OWNER, 
+            GITHUB_REPO, 
+            token=access_token,  # ← Use user's OAuth token
+            dict_issue=issue
+        )
         return created_issue
     except Exception as e:
         raise handle_error(e)
